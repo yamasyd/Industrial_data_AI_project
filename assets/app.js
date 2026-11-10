@@ -48,12 +48,47 @@ function growBars(host) { requestAnimationFrame(() => requestAnimationFrame(() =
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const SERIES = () => [1, 2, 3, 4, 5, 6, 7, 8].map(i => css('--s' + i));
 
+/* ================= CITY: банк как миниатюрный город ================= */
+// Районы: Ядро → расходы, Облако → рынок, ИИ → радар, Контроль → риски. veil приглушает город под плотными дашбордами.
+const CAMS = {
+  hero: { pos: [46, 40, 54], look: [-2, 0, 2], shift: .27, orbit: 1, labels: 'districts' },
+  facts: { pos: [14, 66, 62], look: [0, 0, -4], labels: 'districts', veil: .2 },
+  data: { pos: [0, 96, 14], look: [0, 0, 0], fov: 26, labels: 'none', veil: .85 },
+  costs: { pos: [-36, 22, 6], look: [-12, 3, -12], labels: 'none', veil: .85 },
+  market: { pos: [21, 17, 21], look: [11.5, 6, -12], labels: 'none', veil: .6 },
+  ai: { pos: [36, 17, 40], look: [12, 4, 12], labels: 'none', veil: .6 },
+  risks: { pos: [-44, 22, 38], look: [-11, 6, 10], labels: 'none', alert: 1, veil: .6 },
+  plan: { pos: [0, 96, 14], look: [0, 0, 0], fov: 26, labels: 'none', veil: .85 },
+  finops: { pos: [-20, 15, 46], look: [-18, 0, 6], labels: 'none', veil: .6 },
+  research: { pos: [60, 56, 64], look: [0, 0, 0], labels: 'none', veil: .85 },
+  sources: { pos: [0, 120, 46], look: [0, 0, 0], labels: 'none', veil: .88 }
+};
+const COVERS = [
+  { id: 'growth', pos: [24, 7, 1], look: [12, 6, -12], bg: '#CFE6FF' },
+  { id: 'ai', pos: [22, 9, 24], look: [12, 4.5, 12], bg: '#E3DEFF' },
+  { id: 'strategy', pos: [-4, 6, 0], look: [-12, 2.6, -12], bg: '#FFEFC2' },
+  { id: 'finops', pos: [-22, 4.5, 36], look: [2, 0, 26], bg: '#D9F2E5' },
+  { id: 'europe', pos: [52, 46, 56], look: [0, 0, 0], bg: '#E4ECF6' },
+  { id: 'models', pos: [-6, 15, -36], look: [8, 3, -10], bg: '#FFE0E6' }
+];
+const DISTRICT_TO_SECTION = { core: 'costs', cloud: 'market', ai: 'ai', control: 'risks' };
+let city = null, coversMap = {};
+try {
+  city = window.createCity ? createCity($('stage'), {
+    labelHost: $('labels'), bg: '#FAFAF8',
+    onPick: k => { const id = DISTRICT_TO_SECTION[k]; if (id) $(id).scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' }) }
+  }) : null;
+} catch (e) { console.warn('ATLAS: 3D недоступно', e); city = null }
+if (!city) document.documentElement.classList.add('no-webgl');
+function cityTheme() { if (city) city.setTarget({ ...CAMS[lastKey ? $(lastKey).dataset.cam : 'hero'], bg: css('--bg') }); if (city) onScroll() }
+function coverImg(id, alt = '') { return coversMap[id] ? `<img src="${coversMap[id]}" alt="${esc(alt)}" loading="lazy">` : '' }
+
 /* ================= THEME ================= */
 (function initTheme() { const t = readStore('theme', null); if (t) document.documentElement.dataset.theme = t })();
 function toggleTheme() {
   const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.dataset.theme = dark ? 'light' : 'dark'; writeStore('theme', dark ? 'light' : 'dark');
-  renderCharts(); renderRadar();
+  renderCharts(); renderRadar(); cityTheme();
 }
 
 /* ================= CHARTS (Chart.js) ================= */
@@ -295,6 +330,14 @@ function renderMarket() {
   $('marketBarsTitle').textContent = `Поставщики, ${year}: ${share ? 'доля, %' : 'выручка, млрд USD'}`;
   $('marketBars').innerHTML = barsHTML(rows, max, share ? '%' : '', 1, 3);
   growBars($('marketBars'));
+  if (city) {   // башни в районе «Облако» = поставщики выбранного года (до 6)
+    const tw = rows.slice(0, 6), mx = Math.max(...tw.map(r => r[1]), 1);
+    city.setTowers([0, 1, 2, 3, 4, 5].map(k => tw[k] ? tw[k][1] / mx * 16 : 0));
+    [0, 1, 2, 3, 4, 5].forEach(k => {
+      const r = tw[k], src = r && yr.find(x => x.provider === r[0]);
+      city.setLabelText('t' + k, r ? `${esc(r[0])}<em>${share ? fmt(src.share) + '%' : '$' + fmt(src.revenue / 1000, 0) + ' млрд'}</em>` : '');
+    });
+  }
   const top3 = top3Share(yr);
   $('top3').textContent = fmt(top3) + '%';
   $('marketTitle').textContent = `Три компании держат ${fmt(top3, 0)}% облачного рынка`;
@@ -421,6 +464,7 @@ function calculate() {
   $('payback').textContent = Number.isFinite(calc.pay) ? fmt(calc.pay) + ' мес.' : 'не окупается'; $('roi').textContent = fmt(calc.roi, 0) + '%';
   const vals = [b, calc.base, calc.total], mx = Math.max(...vals);
   $('cols').innerHTML = vals.map((v, i) => `<div><b>${fmt(v, 0)}</b><i style="height:${Math.max(4, v / mx * 90)}px"></i><span>${['Сейчас', 'С ростом', 'С FinOps'][i]}</span></div>`).join('');
+  if (city) city.setTraffic(.35 + g / 80 * 1.65);   // трафик в городе следует за нагрузкой
 }
 function setCalc(o) { RANGES.forEach(([id, k, mn, mx]) => { if (Number.isFinite(o[k])) $(id).value = Math.max(mn, Math.min(mx, o[k])) }); calculate() }
 function budgetFromData() {
@@ -441,7 +485,7 @@ function exportScenario() { csv('atlas-finops-scenario.csv', [['Параметр
 function setResFilter(f) { resFilter = f; setSeg('[data-f]', 'f', f); renderResearch() }
 function cardHTML(a) {
   const on = bookmarks.includes(a.id);
-  return `<article class="card art"><span class="cat">${a.cat}</span><h3><button onclick="openArticle('${a.id}')">${esc(a.title)}</button></h3><p>${esc(a.desc)}</p><div class="meta"><span>${esc(a.source)}, ${a.read} мин</span><button class="mark${on ? ' on' : ''}" onclick="toggleMark('${a.id}')" aria-pressed="${on}" aria-label="${on ? 'Убрать из брифа' : 'Добавить в бриф'}">${ico('mark')}</button></div></article>`;
+  return `<article class="card art">${coversMap[a.id] ? `<button class="cover" onclick="openArticle('${a.id}')" tabindex="-1" aria-hidden="true">${coverImg(a.id)}</button>` : ''}<span class="cat">${a.cat}</span><h3><button onclick="openArticle('${a.id}')">${esc(a.title)}</button></h3><p>${esc(a.desc)}</p><div class="meta"><span>${esc(a.source)}</span><button class="mark${on ? ' on' : ''}" onclick="toggleMark('${a.id}')" aria-pressed="${on}" aria-label="${on ? 'Убрать из брифа' : 'Добавить в бриф'}">${ico('mark')}</button></div></article>`;
 }
 function renderResearch() {
   const q = $('resQ').value.toLowerCase().trim();
@@ -475,7 +519,7 @@ function refs(ids) { return ids.map(id => { const s = sources.find(x => x.id ===
 const goBtn = (id, t) => `<button class="btn ghost sm" onclick="closeAll();$('${id}').scrollIntoView()">${t}</button>`;
 function openArticle(id) {
   const a = articles.find(x => x.id === id); if (!a) return;
-  openSheet(`<div class="sheet-inner"><span class="pill">${a.cat}, ${a.read} мин</span><h2 id="sheetTitle">${esc(a.title)}</h2>${a.body}<h3>Источники</h3>${refs(a.refs)}<p class="src">Рекомендации это интерпретация ATLAS, а не показатели вашего банка.</p><div class="sheet-actions"><button class="btn primary sm" id="sheetMark" onclick="toggleMark('${a.id}')">${bookmarks.includes(a.id) ? '✓ В брифе' : 'Добавить в бриф'}</button>${id === 'finops' ? goBtn('finops', 'Открыть калькулятор') : ''}</div></div>`, 'article');
+  openSheet(`${coversMap[a.id] ? `<div class="sheet-cover">${coverImg(a.id)}</div>` : ""}<div class="sheet-inner"><span class="pill">${a.cat}</span><h2 id="sheetTitle">${esc(a.title)}</h2>${a.body}<h3>Источники</h3>${refs(a.refs)}<p class="src">Рекомендации это интерпретация ATLAS, а не показатели вашего банка.</p><div class="sheet-actions"><button class="btn primary sm" id="sheetMark" onclick="toggleMark('${a.id}')">${bookmarks.includes(a.id) ? '✓ В брифе' : 'Добавить в бриф'}</button>${id === 'finops' ? goBtn('finops', 'Открыть калькулятор') : ''}</div></div>`, 'article');
 }
 function openSource(id) {
   const s = sources.find(x => x.id === id);
@@ -518,11 +562,25 @@ document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette() }
   if (e.key === 'Escape') { closeAll(); toggleNav(false) }
 });
-(function navSpy() {
-  const links = [...document.querySelectorAll('.nav a')];
-  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) links.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + en.target.id)) }), { rootMargin: '-45% 0px -50% 0px' });
-  document.querySelectorAll('main .sec[id]').forEach(s => io.observe(s));
-})();
+/* ================= SCROLL ENGINE: камера города следует за разделами ================= */
+const camSecs = [...document.querySelectorAll('[data-cam]')];
+const navLinks = [...document.querySelectorAll('.nav a')];
+let tops = [], lastKey = '';
+function measure() { tops = camSecs.map(s => s.getBoundingClientRect().top + scrollY) }
+const lerp = (a, b, t) => a + (b - a) * t;
+const lerpArr = (a, b, t) => a.map((v, i) => lerp(v, b[i], t));
+const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t) };
+function onScroll() {
+  const y = scrollY + innerHeight * .5;
+  let i = 0; while (i < tops.length - 1 && y >= tops[i + 1]) i++;
+  const a = CAMS[camSecs[i].dataset.cam], nextSec = camSecs[i + 1], b = nextSec ? CAMS[nextSec.dataset.cam] : a;
+  const s = nextSec ? smooth(.55, 1, (y - tops[i]) / (tops[i + 1] - tops[i])) : 0;
+  const cur = s > .5 ? b : a;
+  if (city) city.setTarget({ pos: lerpArr(a.pos, b.pos, s), look: lerpArr(a.look, b.look, s), shift: lerp(a.shift || 0, b.shift || 0, s), fov: lerp(a.fov || 30, b.fov || 30, s), orbit: lerp(a.orbit || 0, b.orbit || 0, s), alert: lerp(a.alert || 0, b.alert || 0, s), labels: cur.labels });
+  $('veil').style.opacity = lerp(a.veil || 0, b.veil || 0, s);
+  const key = camSecs[i].id;
+  if (key !== lastKey) { lastKey = key; navLinks.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + key)) }
+}
 
 /* sources */
 function exportSources() { csv('atlas-sources.csv', [['Источник', 'Название', 'Публикация', 'Период', 'Охват', 'URL'], ...sources.map(s => [s.name, s.title, s.date, s.period, s.scope, s.url])]) }
@@ -532,6 +590,14 @@ function renderSources() { $('srcList').innerHTML = sources.map(s => `<li><div><
 function renderAll() { renderKPI(); renderDataSection(); renderCosts(); renderMarket(); renderAdoption(); renderRadar(); renderRisks() }
 RANGES.forEach(([id]) => $(id).addEventListener('input', calculate));
 if (window.Chart) { Chart.defaults.font.family = 'Onest, system-ui, sans-serif' }
-renderAll(); renderPlan(); renderSources(); renderResearch();
+renderAll(); renderPlan(); renderSources();
 setCalc(readStore('scenario', { b: 120, g: 25, e: 18, c: 8 }));
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!document.documentElement.dataset.theme) { renderCharts(); renderRadar() } });
+if (city) { try { coversMap = city.covers(COVERS) } catch (e) { coversMap = {} } }
+renderResearch();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!document.documentElement.dataset.theme) { renderCharts(); renderRadar(); cityTheme() } });
+measure(); onScroll(); cityTheme();
+addEventListener('scroll', onScroll, { passive: true });
+addEventListener('resize', () => { measure(); onScroll() });
+addEventListener('load', () => { measure(); onScroll() });
+new ResizeObserver(() => { measure(); onScroll() }).observe(document.querySelector('main'));
+requestAnimationFrame(() => { if (city) city.start() });

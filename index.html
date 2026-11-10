@@ -6,8 +6,8 @@
 <meta name="description" content="ATLAS: аналитика облаков, ИИ и технологических рисков для CIO банка. Загрузите свои таблицы, и дашборды обновятся.">
 <title>ATLAS: облака, ИИ и риски банка</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M13 2 24 24h-6.2L13 13.6 8.2 24H2Z' fill='%232747FF'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="assets/fonts.css">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/fonts.css?v=2">
+<link rel="stylesheet" href="assets/style.css?v=2">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 </head>
@@ -24,7 +24,11 @@
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></symbol>
 </svg>
 
-<header class="masthead">
+<div id="stage" aria-hidden="true"></div>
+<div id="veil" aria-hidden="true"></div>
+<div id="labels" aria-hidden="true"></div>
+
+<header class="masthead" id="top-bar">
   <a class="logo" href="#home" aria-label="ATLAS, на главную">
     <svg viewBox="0 0 26 26" aria-hidden="true"><path d="M13 2 24 24h-6.2L13 13.6 8.2 24H2Z" fill="#2747FF"/></svg>ATLAS
   </a>
@@ -60,24 +64,32 @@
 
 <main>
   <!-- HERO -->
-  <section class="sec hero" id="home">
+  <section class="sec hero" id="home" data-cam="hero">
     <span class="eyebrow">Аналитика для CIO банка</span>
     <h1 class="h1">Облака, ИИ и риски банка на одном экране</h1>
-    <p class="lead">Рынок, технологии, уязвимости и расходы. Загрузите свои таблицы, и все дашборды пересчитаются.</p>
-    <div class="cta">
-      <a class="btn primary" href="#data">Загрузить данные <svg class="ico"><use href="#i-up"/></svg></a>
-      <button class="btn ghost" onclick="openExecBrief()">Брифинг за 3 минуты</button>
+    <div class="hero-top">
+      <div>
+        <p class="lead">Рынок, технологии, уязвимости и расходы. Загрузите свои таблицы, и все дашборды пересчитаются.</p>
+        <div class="cta">
+          <a class="btn primary" href="#data">Загрузить данные <svg class="ico"><use href="#i-up"/></svg></a>
+          <button class="btn ghost" onclick="openExecBrief()">Брифинг для CIO</button>
+        </div>
+        <div class="data-badge" id="dataBadge"><i></i><span>Демонстрационные данные</span></div>
+      </div>
+      <div class="hero-side">
+        Город на фоне это ваш банк. Четыре района, четыре темы. Нажмите на район, чтобы перейти к нему.
+        <div class="lg"><span><i></i>транзакции</span><span><i class="b"></i>данные</span></div>
+      </div>
     </div>
-    <div class="data-badge" id="dataBadge"><i></i><span>Демонстрационные данные</span></div>
   </section>
 
   <!-- KPI -->
-  <section class="sec" id="facts" aria-label="Ключевые показатели" style="padding-top:0;border-top:0">
+  <section class="sec" id="facts" data-cam="facts" aria-label="Ключевые показатели" style="padding-top:40px;border-top:0">
     <div class="grid g4" id="kpiRow"></div>
   </section>
 
   <!-- DATA -->
-  <section class="sec" id="data">
+  <section class="sec" id="data" data-cam="data">
     <div class="sec-head">
       <div>
         <span class="eyebrow">Данные</span>
@@ -97,6 +109,7 @@
         <div class="row-actions" style="margin-top:14px">
           <button class="btn ghost sm" onclick="downloadTemplate()"><svg class="ico"><use href="#i-down"/></svg>Шаблон Excel</button>
           <button class="btn ghost sm" onclick="exportAll()"><svg class="ico"><use href="#i-down"/></svg>Текущие данные</button>
+          <a class="btn ghost sm" href="examples/atlas-example.xlsx" download><svg class="ico"><use href="#i-down"/></svg>Пример для проверки</a>
           <button class="btn ghost sm danger" onclick="resetData()">Вернуть демо</button>
         </div>
       </div>
@@ -116,7 +129,7 @@
   </section>
 
   <!-- COSTS -->
-  <section class="sec" id="costs">
+  <section class="sec" id="costs" data-cam="costs">
     <div class="sec-head">
       <div>
         <span class="eyebrow">Облачные расходы</span>
@@ -149,7 +162,7 @@
   </section>
 
   <!-- MARKET -->
-  <section class="sec" id="market">
+  <section class="sec" id="market" data-cam="market">
     <div class="sec-head">
       <div>
         <span class="eyebrow">Рынок</span>
@@ -191,7 +204,7 @@
   </section>
 
   <!-- AI -->
-  <section class="sec" id="ai">
+  <section class="sec" id="ai" data-cam="ai">
     <div class="sec-head">
       <div>
         <span class="eyebrow">Технологии</span>
@@ -211,7 +224,7 @@
   </section>
 
   <!-- RISKS -->
-  <section class="sec" id="risks">
+  <section class="sec" id="risks" data-cam="risks">
     <div class="sec-head">
       <div>
         <span class="eyebrow">Риски</span>
@@ -240,7 +253,7 @@
   </section>
 
   <!-- PLAN -->
-  <section class="sec" id="plan">
+  <section class="sec" id="plan" data-cam="plan">
     <div class="sec-head">
       <div>
         <span class="eyebrow">План</span>
@@ -253,7 +266,7 @@
   </section>
 
   <!-- FINOPS -->
-  <section class="sec" id="finops">
+  <section class="sec" id="finops" data-cam="finops">
     <div class="sec-head">
       <div>
         <span class="eyebrow">FinOps</span>
@@ -294,7 +307,7 @@
   </section>
 
   <!-- RESEARCH -->
-  <section class="sec" id="research">
+  <section class="sec" id="research" data-cam="research">
     <div class="sec-head">
       <div>
         <span class="eyebrow">Исследования</span>
@@ -314,7 +327,7 @@
   </section>
 
   <!-- SOURCES -->
-  <section class="sec" id="sources">
+  <section class="sec" id="sources" data-cam="sources">
     <div class="grid g2">
       <div>
         <span class="eyebrow">Источники</span>
@@ -352,8 +365,10 @@
 <div class="toast" id="toast" role="status"></div>
 <noscript><p style="padding:20px">Для интерактивных разделов включите JavaScript.</p></noscript>
 
-<script src="assets/data.js"></script>
-<script src="assets/import.js"></script>
-<script src="assets/app.js" defer></script>
+<script src="assets/data.js?v=2"></script>
+<script src="assets/import.js?v=2"></script>
+<script src="assets/three.min.js?v=2" defer></script>
+<script src="assets/city.js?v=2" defer></script>
+<script src="assets/app.js?v=2" defer></script>
 </body>
 </html>
