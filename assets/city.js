@@ -325,79 +325,6 @@
     var crowns = buildTrees();
     Object.keys(districts).forEach(function (k) { districts[k].pick.userData.key = k; });
 
-    /* ---------- traffic ---------- */
-    function Loop(corners, lane, rad) {
-      var n = corners.length, pts = [];
-      var off = corners.map(function (c, i) {
-        var p = corners[(i - 1 + n) % n], q = corners[(i + 1) % n];
-        var d1 = new T.Vector2(c[0] - p[0], c[1] - p[1]).normalize(), d2 = new T.Vector2(q[0] - c[0], q[1] - c[1]).normalize();
-        var r1 = new T.Vector2(-d1.y, d1.x), r2 = new T.Vector2(-d2.y, d2.x);
-        return [c[0] + (r1.x + r2.x) * lane, c[1] + (r1.y + r2.y) * lane];
-      });
-      off.forEach(function (c, i) {
-        var p = off[(i - 1 + n) % n], q = off[(i + 1) % n];
-        var a = new T.Vector2(p[0] - c[0], p[1] - c[1]).normalize().multiplyScalar(rad);
-        var b = new T.Vector2(q[0] - c[0], q[1] - c[1]).normalize().multiplyScalar(rad);
-        for (var s = 0; s <= 6; s++) {
-          var t = s / 6, u = 1 - t;
-          pts.push(new T.Vector3(u * u * (c[0] + a.x) + 2 * u * t * c[0] + t * t * (c[0] + b.x), 0, u * u * (c[1] + a.y) + 2 * u * t * c[1] + t * t * (c[1] + b.y)));
-        }
-      });
-      pts.push(pts[0].clone());
-      this.pts = pts; this.len = [0];
-      for (var i = 1; i < pts.length; i++) this.len.push(this.len[i - 1] + pts[i].distanceTo(pts[i - 1]));
-      this.total = this.len[this.len.length - 1];
-    }
-    Loop.prototype.at = function (u, out, dir) {
-      var d = ((u % 1) + 1) % 1 * this.total, lo = 0, hi = this.len.length - 1;
-      while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (this.len[mid] <= d) lo = mid; else hi = mid; }
-      var a = this.pts[lo], b = this.pts[hi], seg = this.len[hi] - this.len[lo] || 1, t = (d - this.len[lo]) / seg;
-      out.lerpVectors(a, b, t); dir.subVectors(b, a);
-    };
-    function rect(x0, z0, x1, z1, rev) { var c = [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]; return rev ? c.reverse() : c; }
-    var LANE = .62;
-    var loops = [
-      new Loop(rect(-30, -30, 30, 30), LANE, 1.8), new Loop(rect(-30, -30, 30, 30, true), LANE, 1.8),
-      new Loop(rect(-18, -18, 18, 18), LANE, 1.6), new Loop(rect(-18, -18, 18, 18, true), LANE, 1.6),
-      new Loop(rect(-30, -6, 30, 6), LANE, 1.4), new Loop(rect(-6, -30, 6, 30, true), LANE, 1.4),
-      new Loop(rect(-18, -18, -6, -6), LANE, 1.2), new Loop(rect(6, -18, 18, -6, true), LANE, 1.2),
-      new Loop(rect(6, 6, 18, 18), LANE, 1.2), new Loop(rect(-18, 6, -6, 18, true), LANE, 1.2),
-      new Loop(rect(-6, -18, 30, 18), LANE, 1.6), new Loop(rect(-30, -18, 6, 18, true), LANE, 1.6)
-    ];
-    var MAXCARS = 220, BASECARS = 90;
-    var bodyG = blockGeo(1.15, .56, .36, .14, .05); bodyG = bodyG.clone(); bodyG.translate(0, .14, 0);
-    var cabG = blockGeo(.62, .48, .3, .12, .05).clone(); cabG.translate(-.06, .48, 0);
-    var wheelG = new T.BoxGeometry(.9, .2, .62); wheelG.translate(0, .1, 0);
-    var bodies = new T.InstancedMesh(bodyG, new T.MeshStandardMaterial({ roughness: .5 }), MAXCARS);
-    var cabs = new T.InstancedMesh(cabG, M.glass, MAXCARS);
-    var wheels = new T.InstancedMesh(wheelG, M.ink, MAXCARS);
-    var CY = new T.Color(0xffc633), CB = new T.Color(0x2747ff), CW = new T.Color(0xffffff), CS = new T.Color(0x8ccbff);
-    var cars = [];
-    for (var ci = 0; ci < MAXCARS; ci++) {
-      var r = rnd(), col = r < .5 ? CY : r < .82 ? CB : r < .92 ? CS : CW;
-      bodies.setColorAt(ci, col);
-      cars.push({ loop: loops[ci % loops.length], u: rnd(), speed: (.9 + rnd() * .35) });
-    }
-    [bodies, cabs, wheels].forEach(function (m) { m.castShadow = true; m.receiveShadow = false; m.count = 0; m.frustumCulled = false; city.add(m); });
-    var traffic = { k: 1, cur: 0 }, carsOn = false;
-    var cp = new T.Vector3(), cd = new T.Vector3(), cq = new T.Quaternion(), one = new T.Vector3(1, 1, 1), cm = new T.Matrix4();
-    function updateCars(dt) {
-      var want = Math.round(BASECARS * traffic.k);
-      traffic.cur += (want - traffic.cur) * Math.min(1, dt * 3);
-      var n = carsOn ? Math.max(0, Math.min(MAXCARS, Math.round(traffic.cur))) : 0;
-      bodies.count = cabs.count = wheels.count = n;
-      var speedMul = .75 + .25 * traffic.k;
-      for (var i = 0; i < n; i++) {
-        var c = cars[i];
-        if (!reduced) c.u += dt * c.speed * speedMul * 4.2 / c.loop.total;
-        c.loop.at(c.u, cp, cd);
-        cq.setFromAxisAngle(yAxis, Math.atan2(-cd.z, cd.x));
-        cp.y = .06; cm.compose(cp, cq, one);
-        bodies.setMatrixAt(i, cm); cabs.setMatrixAt(i, cm); wheels.setMatrixAt(i, cm);
-      }
-      bodies.instanceMatrix.needsUpdate = cabs.instanceMatrix.needsUpdate = wheels.instanceMatrix.needsUpdate = true;
-    }
-
     /* ---------- labels ---------- */
     var labelHost = opts.labelHost, labels = [];
     function addLabel(id, html, posFn, group, onClick, cls) {
@@ -490,9 +417,7 @@
     function covers(list) {
       var out = {}, w = 960, h = 600;
       var saved = { bg: scene.background.clone(), fog: scene.fog.color.clone() };
-      var prevCount = bodies.count;
       finishIntro(true);
-      carsOn = true; traffic.cur = BASECARS * 1.2; updateCars(0);
       renderer.setPixelRatio(1); renderer.setSize(w, h, false);
       var c2 = new T.PerspectiveCamera(30, w / h, .5, 600);
       list.forEach(function (v) {
@@ -505,12 +430,10 @@
       });
       scene.background.copy(saved.bg); scene.fog.color.copy(saved.fog); ground.material.color.set(0xdbe3ed);
       renderer.setPixelRatio(DPR); resize();
-      bodies.count = cabs.count = wheels.count = prevCount;
       if (introStart == null) {
         intro.forEach(function (it) { it.obj.scale.y = .001; });
         districts.cloud.cloud.scale.set(.001, .001, .001); districts.ai.top.scale.set(.001, .001, .001);
         towers.forEach(function (tw) { tw.value = 0; layoutTower(tw); });
-        carsOn = false;
       }
       return out;
     }
@@ -523,7 +446,7 @@
       intro.forEach(function (it) { it.obj.scale.y = 1; });
       districts.cloud.cloud.scale.set(1, 1, 1); districts.ai.top.scale.set(1, 1, 1);
       towers.forEach(function (tw) { tw.value = tw.target; layoutTower(tw); });
-      if (!silent) { introDone = true; carsOn = true; }
+      if (!silent) introDone = true;
     }
     function layoutTower(tw) {
       var v = tw.value;
@@ -554,7 +477,6 @@
         });
         var pc = Math.max(0, Math.min(1, (it - 1.1) / .9)), ec = Math.max(.001, easeBack(pc));
         districts.cloud.cloud.scale.set(ec, ec, ec); districts.ai.top.scale.set(ec, ec, ec);
-        if (it > 1.2) carsOn = true;
         if (all && pc >= 1) introDone = true;
       }
 
@@ -588,7 +510,6 @@
         beaconLight.intensity = alert * 40 * (bp < .5 ? 1 - bp * 2 : 0);
         var s = 1 + bp * (4 + alert * 6); pulseRing.scale.set(s, s, s); pulseRing.material.opacity = (1 - bp) * (.12 + alert * .5);
       }
-      updateCars(paused ? 0 : dt);
 
       // hover
       if (introDone && !mobile) { setHover(overStage ? pickAt((pointer.x * .5 + .5) * innerWidth, (-pointer.y * .5 + .5) * innerHeight) : null); renderer.domElement.style.cursor = hovered ? 'pointer' : ''; }
@@ -597,7 +518,8 @@
       updateLabels();
     }
 
-    document.addEventListener('visibilitychange', function () { running = !document.hidden; last = performance.now() / 1000; });
+    var frozen = false;
+    document.addEventListener('visibilitychange', function () { running = !document.hidden && !frozen; last = performance.now() / 1000; });
     host.addEventListener('click', function (e) { var k = pickAt(e.clientX, e.clientY); if (k && opts.onPick) opts.onPick(k); });
 
     applyCamera();
@@ -607,10 +529,9 @@
       start: start,
       setTarget: setTarget,
       setTowers: setTowerTargets,
-      setTraffic: function (k) { traffic.k = k; return Math.round(BASECARS * k); },
       setLabelText: function (id, html) { labels.forEach(function (l) { if (l.id === id) l.inner.innerHTML = html; }); },
       setPaused: function (p) { paused = p; },
-      freeze: function (f) { running = !f; if (f) { applyCamera(); renderer.render(scene, camera); updateLabels(); } else last = performance.now() / 1000; },
+      freeze: function (f) { frozen = !!f; running = !f; if (f) { applyCamera(); renderer.render(scene, camera); updateLabels(); } else last = performance.now() / 1000; },
       snap: function () { cam.pos.copy(tgt.pos); cam.look.copy(tgt.look); cam.shift = tgt.shift; cam.fov = tgt.fov; cam.orbit = tgt.orbit; alert = tgt.alert; towers.forEach(function (tw) { tw.value = tw.target; layoutTower(tw); }); },
       covers: covers,
       hovered: function () { return hovered; },

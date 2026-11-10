@@ -6,10 +6,11 @@
 <meta name="description" content="ATLAS: аналитика облаков, ИИ и технологических рисков для CIO банка. Загрузите свои таблицы, и дашборды обновятся.">
 <title>ATLAS: облака, ИИ и риски банка</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M13 2 24 24h-6.2L13 13.6 8.2 24H2Z' fill='%232747FF'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="assets/fonts.css?v=2">
-<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="stylesheet" href="assets/fonts.css?v=3">
+<link rel="stylesheet" href="assets/style.css?v=3">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<script>try { if (JSON.parse(localStorage.getItem('atlas-minimal'))) document.documentElement.classList.add('minimal') } catch (e) { }</script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -21,6 +22,7 @@
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V5m-5 5 5-5 5 5M5 20h14"/></symbol>
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16"/></symbol>
+  <symbol id="i-mode" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M9 9.5v10"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/></symbol>
 </svg>
 
@@ -44,6 +46,7 @@
   </nav>
   <div class="actions">
     <button class="icon-btn" onclick="openPalette()" aria-label="Поиск (Ctrl+K)" title="Поиск, Ctrl+K"><svg class="ico"><use href="#i-search"/></svg></button>
+    <button class="mode-btn" id="modeBtn" onclick="toggleMinimal()" aria-pressed="false"><svg class="ico"><use href="#i-mode"/></svg><span class="t">Минималистичная версия</span></button>
     <button class="icon-btn" onclick="toggleTheme()" aria-label="Сменить тему" title="Светлая или тёмная тема"><svg class="ico"><use href="#i-moon"/></svg></button>
     <button class="brief-btn" id="briefBtn" onclick="openSaved()"><span class="t">Мой бриф</span><span id="savedCount">0</span></button>
     <button class="icon-btn burger" onclick="toggleNav()" aria-label="Меню" aria-expanded="false" id="burger"><svg class="ico"><use href="#i-menu"/></svg></button>
@@ -78,7 +81,6 @@
       </div>
       <div class="hero-side">
         Город на фоне это ваш банк. Четыре района, четыре темы. Нажмите на район, чтобы перейти к нему.
-        <div class="lg"><span><i></i>транзакции</span><span><i class="b"></i>данные</span></div>
       </div>
     </div>
   </section>
@@ -365,10 +367,10 @@
 <div class="toast" id="toast" role="status"></div>
 <noscript><p style="padding:20px">Для интерактивных разделов включите JavaScript.</p></noscript>
 
-<script src="assets/data.js?v=2"></script>
-<script src="assets/import.js?v=2"></script>
-<script src="assets/three.min.js?v=2" defer></script>
-<script src="assets/city.js?v=2" defer></script>
-<script src="assets/app.js?v=2" defer></script>
+<script src="assets/data.js?v=3"></script>
+<script src="assets/import.js?v=3"></script>
+<script src="assets/three.min.js?v=3" defer></script>
+<script src="assets/city.js?v=3" defer></script>
+<script src="assets/app.js?v=3" defer></script>
 </body>
 </html>

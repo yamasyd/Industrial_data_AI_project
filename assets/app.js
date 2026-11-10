@@ -72,14 +72,36 @@ const COVERS = [
   { id: 'models', pos: [-6, 15, -36], look: [8, 3, -10], bg: '#FFE0E6' }
 ];
 const DISTRICT_TO_SECTION = { core: 'costs', cloud: 'market', ai: 'ai', control: 'risks' };
-let city = null, coversMap = {};
-try {
-  city = window.createCity ? createCity($('stage'), {
-    labelHost: $('labels'), bg: '#FAFAF8',
-    onPick: k => { const id = DISTRICT_TO_SECTION[k]; if (id) $(id).scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' }) }
-  }) : null;
-} catch (e) { console.warn('ATLAS: 3D недоступно', e); city = null }
-if (!city) document.documentElement.classList.add('no-webgl');
+let city = null, coversMap = {}, cityTried = false;
+let minimal = !!readStore('minimal', false);
+function initCity() {   // город создаётся только когда нужен: в минималистичной версии three.js не нагружает страницу
+  if (cityTried) return; cityTried = true;
+  try {
+    city = window.createCity ? createCity($('stage'), {
+      labelHost: $('labels'), bg: '#FAFAF8',
+      onPick: k => { const id = DISTRICT_TO_SECTION[k]; if (id) $(id).scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth' }) }
+    }) : null;
+  } catch (e) { console.warn('ATLAS: 3D недоступно', e); city = null }
+  if (!city) { document.documentElement.classList.add('no-webgl'); return }
+  try { coversMap = city.covers(COVERS) } catch (e) { coversMap = {} }
+  renderMarket(); renderResearch(); cityTheme();
+  requestAnimationFrame(() => city.start());
+}
+function paintModeBtn() {
+  const b = $('modeBtn'); if (!b) return;
+  b.querySelector('.t').textContent = minimal ? 'Версия с городом' : 'Минималистичная версия';
+  b.setAttribute('aria-pressed', minimal); b.title = minimal ? 'Показать 3D-город на фоне' : 'Убрать 3D-город и оставить только данные';
+}
+function toggleMinimal() {
+  // высота первого экрана меняется, поэтому держим в кадре тот же раздел
+  const anchor = scrollY > 10 ? camSecs.find(s => s.getBoundingClientRect().bottom > 80) : null, off = anchor ? anchor.getBoundingClientRect().top : 0;
+  minimal = !minimal; writeStore('minimal', minimal);
+  document.documentElement.classList.toggle('minimal', minimal);
+  if (anchor) scrollTo({ top: anchor.getBoundingClientRect().top + scrollY - off, behavior: 'instant' });
+  if (minimal) { if (city) city.freeze(true) } else if (city) city.freeze(false); else initCity();
+  paintModeBtn(); measure(); onScroll();
+  toast(minimal ? 'Минималистичная версия: только данные' : 'Город снова на фоне');
+}
 function cityTheme() { if (city) city.setTarget({ ...CAMS[lastKey ? $(lastKey).dataset.cam : 'hero'], bg: css('--bg') }); if (city) onScroll() }
 function coverImg(id, alt = '') { return coversMap[id] ? `<img src="${coversMap[id]}" alt="${esc(alt)}" loading="lazy">` : '' }
 
@@ -464,7 +486,6 @@ function calculate() {
   $('payback').textContent = Number.isFinite(calc.pay) ? fmt(calc.pay) + ' мес.' : 'не окупается'; $('roi').textContent = fmt(calc.roi, 0) + '%';
   const vals = [b, calc.base, calc.total], mx = Math.max(...vals);
   $('cols').innerHTML = vals.map((v, i) => `<div><b>${fmt(v, 0)}</b><i style="height:${Math.max(4, v / mx * 90)}px"></i><span>${['Сейчас', 'С ростом', 'С FinOps'][i]}</span></div>`).join('');
-  if (city) city.setTraffic(.35 + g / 80 * 1.65);   // трафик в городе следует за нагрузкой
 }
 function setCalc(o) { RANGES.forEach(([id, k, mn, mx]) => { if (Number.isFinite(o[k])) $(id).value = Math.max(mn, Math.min(mx, o[k])) }); calculate() }
 function budgetFromData() {
@@ -592,12 +613,11 @@ RANGES.forEach(([id]) => $(id).addEventListener('input', calculate));
 if (window.Chart) { Chart.defaults.font.family = 'Onest, system-ui, sans-serif' }
 renderAll(); renderPlan(); renderSources();
 setCalc(readStore('scenario', { b: 120, g: 25, e: 18, c: 8 }));
-if (city) { try { coversMap = city.covers(COVERS) } catch (e) { coversMap = {} } }
-renderResearch();
+renderResearch(); paintModeBtn();
+if (!minimal) initCity();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!document.documentElement.dataset.theme) { renderCharts(); renderRadar(); cityTheme() } });
 measure(); onScroll(); cityTheme();
 addEventListener('scroll', onScroll, { passive: true });
 addEventListener('resize', () => { measure(); onScroll() });
 addEventListener('load', () => { measure(); onScroll() });
 new ResizeObserver(() => { measure(); onScroll() }).observe(document.querySelector('main'));
-requestAnimationFrame(() => { if (city) city.start() });

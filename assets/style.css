@@ -378,3 +378,13 @@ main,.foot{position:relative;z-index:3}
   .hero-side{display:none}
   .cover{width:calc(100% + 36px);margin:-18px -18px 4px}
 }
+
+/* ---------- кнопка и минималистичная версия ---------- */
+.mode-btn{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:9px;border:1px solid var(--line-2);font-size:14px;font-weight:500;white-space:nowrap;transition:border-color .2s,background .2s,color .2s}
+.mode-btn:hover{border-color:var(--ink)}
+.mode-btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.minimal #stage,.minimal #veil,.minimal #labels,.minimal .hero-side,.minimal .cover,.minimal .sheet-cover{display:none}
+.minimal .hero{min-height:auto;padding:96px 0 48px;pointer-events:auto}
+.minimal .hero::before{display:none}
+.minimal .sheet-cover + .sheet-inner{padding-top:56px}
+@media (max-width:760px){.mode-btn .t{display:none}.mode-btn{width:38px;padding:0;justify-content:center}.minimal .hero{padding:56px 0 36px}}
