@@ -380,12 +380,28 @@
     }
 
     /* ---------- camera rig ---------- */
-    var cam = { pos: new T.Vector3(60, 52, 66), look: new T.Vector3(0, 0, 0), shift: 0, fov: 30, orbit: 0 };
-    var tgt = { pos: new T.Vector3(46, 40, 50), look: new T.Vector3(2, 0, 0), shift: .2, fov: 30, orbit: 1, alert: 0 };
+    var cam = { pos: new T.Vector3(60, 52, 66), look: new T.Vector3(0, 0, 0), shift: 0, shiftY: 0, fov: 30, orbit: 0 };
+    var tgt = { pos: new T.Vector3(46, 40, 50), look: new T.Vector3(2, 0, 0), shift: .2, shiftY: 0, fov: 30, orbit: 1, alert: 0 };
     var alert = 0, ang = 0, lookTmp = new T.Vector3(), posTmp = new T.Vector3();
+    // автокадрирование: камера отъезжает, пока подписи всех районов не попадут в заданную область экрана
+    var fitK = 1, fitBox = null, fv = new T.Vector3();
+    function updateFit(dt) {
+      var want = 1;
+      if (fitBox && introDone) {
+        camera.updateMatrixWorld();
+        var cx = (fitBox[0] + fitBox[1]) / 2, cy = (fitBox[2] + fitBox[3]) / 2, hx = (fitBox[1] - fitBox[0]) / 2, hy = (fitBox[3] - fitBox[2]) / 2, m = 0;
+        labels.forEach(function (l) { if (l.group !== 'districts') return; l.pos(fv); fv.project(camera); m = Math.max(m, Math.abs(fv.x - cx) / hx, Math.abs(fv.y - cy) / hy); });
+        want = m > 1 ? fitK * (1 + (m - 1) * .6) : m < .8 ? fitK * (1 - (.8 - m) * .3) : fitK;
+        want = Math.max(1, Math.min(2.4, want));
+      }
+      fitK += (want - fitK) * Math.min(1, dt * 3);
+      scene.fog.near = 70 * fitK; scene.fog.far = 175 * fitK;   // при отдалении туман не съедает город
+    }
     function setTarget(t) {
       tgt.pos.fromArray(t.pos); tgt.look.fromArray(t.look);
       tgt.shift = t.shift || 0; tgt.fov = t.fov || 30; tgt.orbit = t.orbit || 0; tgt.alert = t.alert || 0;
+      if ('fit' in t) fitBox = t.fit || null;
+      tgt.shiftY = t.shiftY || 0;
       if (t.labels) labelGroup = t.labels;
       if (t.bg) { var c = new T.Color(t.bg); bgTarget.copy(c); }
     }
@@ -403,8 +419,8 @@
       var w = host.clientWidth || innerWidth, h = host.clientHeight || innerHeight;
       var shift = mobile ? 0 : cam.shift;
       camera.fov = cam.fov; camera.aspect = w / h;
-      camera.setViewOffset(w, h, -shift * w, 0, w, h);
-      posTmp.copy(cam.pos).sub(cam.look);
+      camera.setViewOffset(w, h, -shift * w, cam.shiftY * h, w, h);   // shiftY поднимает город над текстом на вертикальных экранах
+      posTmp.copy(cam.pos).sub(cam.look).multiplyScalar(fitK);
       var a = ang * cam.orbit;
       var cs = Math.cos(a), sn = Math.sin(a), x = posTmp.x * cs - posTmp.z * sn, z = posTmp.x * sn + posTmp.z * cs;
       posTmp.set(x, posTmp.y, z).add(cam.look);
@@ -489,12 +505,13 @@
       // camera damping
       var k = Math.min(1, dt * 2.1);
       cam.pos.lerp(tgt.pos, k); cam.look.lerp(tgt.look, k);
-      cam.shift += (tgt.shift - cam.shift) * k; cam.fov += (tgt.fov - cam.fov) * k; cam.orbit += (tgt.orbit - cam.orbit) * k;
+      cam.shift += (tgt.shift - cam.shift) * k; cam.shiftY += (tgt.shiftY - cam.shiftY) * k; cam.fov += (tgt.fov - cam.fov) * k; cam.orbit += (tgt.orbit - cam.orbit) * k;
       alert += (tgt.alert - alert) * k;
       ptr.sx += (ptr.x - ptr.sx) * Math.min(1, dt * 2.5); ptr.sy += (ptr.y - ptr.sy) * Math.min(1, dt * 2.5);
       if (!reduced && !paused) ang = Math.sin(time * .07) * .22;
       scene.background.lerp(bgTarget, k); scene.fog.color.copy(scene.background);
       applyCamera();
+      updateFit(dt);
 
       // ambient motion
       if (!reduced && !paused) {
@@ -532,7 +549,7 @@
       setLabelText: function (id, html) { labels.forEach(function (l) { if (l.id === id) l.inner.innerHTML = html; }); },
       setPaused: function (p) { paused = p; },
       freeze: function (f) { frozen = !!f; running = !f; if (f) { applyCamera(); renderer.render(scene, camera); updateLabels(); } else last = performance.now() / 1000; },
-      snap: function () { cam.pos.copy(tgt.pos); cam.look.copy(tgt.look); cam.shift = tgt.shift; cam.fov = tgt.fov; cam.orbit = tgt.orbit; alert = tgt.alert; towers.forEach(function (tw) { tw.value = tw.target; layoutTower(tw); }); },
+      snap: function () { cam.pos.copy(tgt.pos); cam.look.copy(tgt.look); cam.shift = tgt.shift; cam.shiftY = tgt.shiftY; cam.fov = tgt.fov; cam.orbit = tgt.orbit; alert = tgt.alert; towers.forEach(function (tw) { tw.value = tw.target; layoutTower(tw); }); },
       covers: covers,
       hovered: function () { return hovered; },
       resize: resize

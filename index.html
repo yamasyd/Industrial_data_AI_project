@@ -6,8 +6,8 @@
 <meta name="description" content="ATLAS: аналитика облаков, ИИ и технологических рисков для CIO банка. Загрузите свои таблицы, и дашборды обновятся.">
 <title>ATLAS: облака, ИИ и риски банка</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M13 2 24 24h-6.2L13 13.6 8.2 24H2Z' fill='%232747FF'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="assets/fonts.css?v=3">
-<link rel="stylesheet" href="assets/style.css?v=3">
+<link rel="stylesheet" href="assets/fonts.css?v=10">
+<link rel="stylesheet" href="assets/style.css?v=10">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <script>try { if (JSON.parse(localStorage.getItem('atlas-minimal'))) document.documentElement.classList.add('minimal') } catch (e) { }</script>
@@ -144,7 +144,7 @@
     <div class="grid g2" style="margin-top:16px">
       <div class="card span2">
         <div class="card-head"><div><h3 class="h3">Факт и план по месяцам</h3><div class="small">млн ₽</div></div>
-          <div class="legend" style="margin:0"><span><i style="background:var(--s1)"></i>Факт</span><span><i class="line" style="background:var(--ink-2)"></i>План</span></div></div>
+          <div class="legend" style="margin:0"><span><i style="background:var(--s1)"></i>Факт</span><span><i class="line" style="background:var(--s2)"></i>План</span></div></div>
         <div class="chart"><canvas id="chPlanFact" aria-label="Факт и план расходов по месяцам" role="img"></canvas></div>
       </div>
       <div class="card">
@@ -216,7 +216,7 @@
     </div>
     <div class="grid g2">
       <div class="card"><svg class="radar-svg" id="radar" viewBox="0 0 400 400" role="img" aria-label="Технологический радар"></svg>
-        <div class="rlegend"><span><i style="background:var(--s1)"></i>Внедрять</span><span><i style="background:var(--s4)"></i>Пилотировать</span><span><i style="background:var(--muted)"></i>Наблюдать</span></div></div>
+        <div class="rlegend"><span><i style="background:var(--s1)"></i>Внедрять</span><span><i style="background:var(--s4)"></i>Пилотировать</span><span><i style="background:var(--s7)"></i>Наблюдать</span></div></div>
       <div class="card" id="techDetail" aria-live="polite"></div>
     </div>
     <details class="more">
@@ -367,10 +367,10 @@
 <div class="toast" id="toast" role="status"></div>
 <noscript><p style="padding:20px">Для интерактивных разделов включите JavaScript.</p></noscript>
 
-<script src="assets/data.js?v=3"></script>
-<script src="assets/import.js?v=3"></script>
-<script src="assets/three.min.js?v=3" defer></script>
-<script src="assets/city.js?v=3" defer></script>
-<script src="assets/app.js?v=3" defer></script>
+<script src="assets/data.js?v=10"></script>
+<script src="assets/import.js?v=10"></script>
+<script src="assets/three.min.js?v=10" defer></script>
+<script src="assets/city.js?v=10" defer></script>
+<script src="assets/app.js?v=10" defer></script>
 </body>
 </html>

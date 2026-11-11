@@ -42,7 +42,7 @@ function downloadBlob(name, b) { const u = URL.createObjectURL(b), a = document.
 function csv(name, rows) { download(name, '﻿' + rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n'), 'text/csv;charset=utf-8') }
 function setSeg(sel, attr, val) { document.querySelectorAll(sel).forEach(b => b.classList.toggle('on', b.dataset[attr] === String(val))) }
 function barsHTML(rows, max, unit, d = 1, topN = 0) {
-  return rows.map(([n, v], i) => `<div class="bar${i < topN ? ' top' : ''}"><span title="${esc(n)}">${esc(n)}</span><div class="track"><div class="fill" data-w="${max ? Math.max(0, Math.min(100, v / max * 100)) : 0}"></div></div><b>${fmt(v, d)}${unit}</b></div>`).join('')
+  return rows.map(([n, v, c], i) => `<div class="bar${i < topN ? ' top' : ''}"${c ? ` style="--bar:${c}"` : ''}><span title="${esc(n)}">${esc(n)}</span><div class="track"><div class="fill" data-w="${max ? Math.max(0, Math.min(100, v / max * 100)) : 0}"></div></div><b>${fmt(v, d)}${unit}</b></div>`).join('')
 }
 function growBars(host) { requestAnimationFrame(() => requestAnimationFrame(() => host.querySelectorAll('.fill').forEach(f => f.style.width = f.dataset.w + '%'))) }
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -52,7 +52,7 @@ const SERIES = () => [1, 2, 3, 4, 5, 6, 7, 8].map(i => css('--s' + i));
 // Районы: Ядро → расходы, Облако → рынок, ИИ → радар, Контроль → риски. veil приглушает город под плотными дашбордами.
 const CAMS = {
   hero: { pos: [46, 40, 54], look: [-2, 0, 2], shift: .27, orbit: 1, labels: 'districts' },
-  facts: { pos: [14, 66, 62], look: [0, 0, -4], labels: 'districts', veil: .2 },
+  facts: { pos: [14, 66, 62], look: [0, 0, -4], labels: 'none', veil: .2 },
   data: { pos: [0, 96, 14], look: [0, 0, 0], fov: 26, labels: 'none', veil: .85 },
   costs: { pos: [-36, 22, 6], look: [-12, 3, -12], labels: 'none', veil: .85 },
   market: { pos: [21, 17, 21], look: [11.5, 6, -12], labels: 'none', veil: .6 },
@@ -125,7 +125,7 @@ function chartBase(extra = {}) {
       tooltip: { backgroundColor: css('--surface'), titleColor: css('--ink'), bodyColor: css('--ink-2'), borderColor: css('--line-2'), borderWidth: 1, padding: 10, cornerRadius: 8, boxPadding: 4, usePointStyle: true, titleFont: { family: 'Onest', weight: '600' }, bodyFont: { family: 'Onest' } }
     },
     scales: {
-      x: { grid: { display: false }, border: { color: css('--line-2') }, ticks: { color: muted, font: { family: 'Onest', size: 12 }, maxRotation: 0, autoSkipPadding: 12 } },
+      x: { grid: { display: false }, border: { color: grid }, ticks: { color: muted, font: { family: 'Onest', size: 12 }, maxRotation: 0, autoSkipPadding: 12 } },
       y: { beginAtZero: true, grid: { color: grid }, border: { display: false }, ticks: { color: muted, font: { family: 'Onest', size: 12 }, maxTicksLimit: 5, callback: v => Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 2 }) } }
     },
     ...extra
@@ -254,7 +254,7 @@ function costCategories() {
 }
 function catColor(cat) {   // цвет закреплён за категорией, а не за её местом в фильтре
   const cats = costCategories(), i = cats.indexOf(cat), S = SERIES();
-  return i >= 0 && i < 7 ? S[i] : css('--muted');
+  return i >= 0 && i < 7 ? S[i] : S[7];
 }
 const catKey = cat => { const cats = costCategories(); return cats.indexOf(cat) < 7 ? cat : 'Другое' };
 function setCostCat(c) { costCat = c; setSeg('[data-cc]', 'cc', c); renderCosts() }
@@ -293,7 +293,7 @@ function renderCosts() {
       : tile('Динамика расходов', trend != null ? `${trend > 0 ? '+' : ''}${fmt(trend)}<small>%</small>` : '—', 'последние 3 мес. к первым 3')
   ].join('');
 
-  const labels = months.map(monLabel), S1 = css('--s1'), ink2 = css('--ink-2');
+  const labels = months.map(monLabel), S1 = css('--s1'), ink2 = css('--s2');
   const money = c => `${c.dataset.label}: ${fmt(c.parsed.y, 2)} млн ₽`;
   // 1. Факт и план
   drawChart('chPlanFact', {
@@ -306,13 +306,13 @@ function renderCosts() {
   });
   // 2. Структура по категориям (stacked)
   const catsShown = costCat === 'all' ? uniq(cats.map(catKey)) : [costCat];
-  $('catLegend').innerHTML = catsShown.map(c => `<span><i style="background:${c === 'Другое' ? css('--muted') : catColor(c)}"></i>${esc(c)}</span>`).join('');
+  $('catLegend').innerHTML = catsShown.map(c => `<span><i style="background:${c === 'Другое' ? SERIES()[7] : catColor(c)}"></i>${esc(c)}</span>`).join('');
   const base2 = chartBase();
   drawChart('chCats', {
     type: 'bar', data: {
       labels, datasets: catsShown.map(c => ({
         label: c, data: months.map(m => sum(all.filter(r => r.month === m && catKey(r.category) === c), r => r.fact)),
-        backgroundColor: c === 'Другое' ? css('--muted') : catColor(c), borderColor: css('--surface'), borderWidth: { top: 2 }, borderSkipped: false, maxBarThickness: 26
+        backgroundColor: c === 'Другое' ? SERIES()[7] : catColor(c), borderColor: css('--surface'), borderWidth: { top: 2 }, borderSkipped: false, maxBarThickness: 26
       }))
     }, options: { ...base2, plugins: { ...base2.plugins, tooltip: { ...base2.plugins.tooltip, callbacks: { label: money, footer: it => 'Всего: ' + fmt(sum(it, x => x.parsed.y), 2) + ' млн ₽' } } }, scales: { x: { ...base2.scales.x, stacked: true }, y: { ...base2.scales.y, stacked: true } } }
   });
@@ -347,7 +347,7 @@ function renderMarket() {
   $('yearSeg').innerHTML = ys.slice(-6).map(y => `<button data-year="${y}" class="${y === year ? 'on' : ''}" onclick="setYear(${y})">${y}</button>`).join('');
   const share = mode === 'share', yr = DATA.market.filter(r => r.year === year);
   const order = providerOrder();
-  const rows = yr.slice().sort((a, b) => order.indexOf(a.provider) - order.indexOf(b.provider)).map(r => [r.provider, share ? r.share : r.revenue / 1000]);
+  const rows = yr.slice().sort((a, b) => order.indexOf(a.provider) - order.indexOf(b.provider)).map(r => [r.provider, share ? r.share : r.revenue / 1000, SERIES()[Math.min(7, order.indexOf(r.provider))]]);   // цвет поставщика как на графике по годам
   const max = Math.max(...rows.map(r => r[1]), 0) * 1.05;
   $('marketBarsTitle').textContent = `Поставщики, ${year}: ${share ? 'доля, %' : 'выручка, млрд USD'}`;
   $('marketBars').innerHTML = barsHTML(rows, max, share ? '%' : '', 1, 3);
@@ -404,7 +404,7 @@ function techPos(t) {
 let TECHS = [];
 function renderRadar() {
   TECHS = techList(); if (selTech >= TECHS.length) selTech = 0;
-  const svg = $('radar'), cols = [css('--s1'), css('--s4'), css('--muted')];
+  const svg = $('radar'), cols = [css('--s1'), css('--s4'), css('--s7')];
   let h = '';
   [172, 118, 62].forEach(r => h += `<circle class="ring" cx="200" cy="200" r="${r}"/>`);
   h += `<path class="axis" d="M200 22V378M22 200H378"/>`;
@@ -485,7 +485,8 @@ function calculate() {
   $('baseline').textContent = fmt(calc.base) + ' млн ₽'; $('optimized').textContent = fmt(calc.total) + ' млн ₽';
   $('payback').textContent = Number.isFinite(calc.pay) ? fmt(calc.pay) + ' мес.' : 'не окупается'; $('roi').textContent = fmt(calc.roi, 0) + '%';
   const vals = [b, calc.base, calc.total], mx = Math.max(...vals);
-  $('cols').innerHTML = vals.map((v, i) => `<div><b>${fmt(v, 0)}</b><i style="height:${Math.max(4, v / mx * 90)}px"></i><span>${['Сейчас', 'С ростом', 'С FinOps'][i]}</span></div>`).join('');
+  const colC = [css('--s1'), css('--s2'), css('--s3')];
+  $('cols').innerHTML = vals.map((v, i) => `<div><b>${fmt(v, 0)}</b><i style="height:${Math.max(4, v / mx * 90)}px;background:${colC[i]}"></i><span>${['Сейчас', 'С ростом', 'С FinOps'][i]}</span></div>`).join('');
 }
 function setCalc(o) { RANGES.forEach(([id, k, mn, mx]) => { if (Number.isFinite(o[k])) $(id).value = Math.max(mn, Math.min(mx, o[k])) }); calculate() }
 function budgetFromData() {
@@ -587,7 +588,25 @@ document.addEventListener('keydown', e => {
 const camSecs = [...document.querySelectorAll('[data-cam]')];
 const navLinks = [...document.querySelectorAll('.nav a')];
 let tops = [], lastKey = '';
-function measure() { tops = camSecs.map(s => s.getBoundingClientRect().top + scrollY) }
+let heroFit = null;
+function measure() {
+  tops = camSecs.map(s => s.getBoundingClientRect().top + scrollY);
+  // область, где должны поместиться подписи районов: под шапкой и над текстом первого экрана
+  const head = $('top-bar').offsetHeight, text = document.querySelector('.hero .eyebrow').getBoundingClientRect().top + scrollY;
+  // точка привязки подписи у её нижнего края, поэтому сверху оставляем место под саму подпись (~50px)
+  const yTop = 1 - 2 * (head + 64) / innerHeight, wide = innerWidth / innerHeight >= 1.25;
+  if (wide) {
+    // широкий экран: город сдвинут вправо, заголовок не перехватывает клики, подписи могут быть где угодно в кадре
+    heroFit = [-.9, .9, -.8, yTop];
+    Object.assign(CAMS.hero, { pos: [46, 40, 54], look: [-2, 0, 2], shiftY: 0 });
+  } else {
+    // узкий или вертикальный экран: город над текстом
+    heroFit = [-.86, .86, Math.min(yTop - .35, 1 - 2 * (text - 12) / innerHeight), yTop];
+    // камера выше и смотрит в центр, кадр сдвинут так, чтобы город встал в полосу над текстом
+    Object.assign(CAMS.hero, { pos: [36, 64, 46], look: [0, 0, 0], shiftY: (heroFit[2] + heroFit[3]) / 4 });
+  }
+  CAMS.hero.shift = wide ? .2 : 0;
+}
 const lerp = (a, b, t) => a + (b - a) * t;
 const lerpArr = (a, b, t) => a.map((v, i) => lerp(v, b[i], t));
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t) };
@@ -597,7 +616,7 @@ function onScroll() {
   const a = CAMS[camSecs[i].dataset.cam], nextSec = camSecs[i + 1], b = nextSec ? CAMS[nextSec.dataset.cam] : a;
   const s = nextSec ? smooth(.55, 1, (y - tops[i]) / (tops[i + 1] - tops[i])) : 0;
   const cur = s > .5 ? b : a;
-  if (city) city.setTarget({ pos: lerpArr(a.pos, b.pos, s), look: lerpArr(a.look, b.look, s), shift: lerp(a.shift || 0, b.shift || 0, s), fov: lerp(a.fov || 30, b.fov || 30, s), orbit: lerp(a.orbit || 0, b.orbit || 0, s), alert: lerp(a.alert || 0, b.alert || 0, s), labels: cur.labels });
+  if (city) city.setTarget({ pos: lerpArr(a.pos, b.pos, s), look: lerpArr(a.look, b.look, s), shift: lerp(a.shift || 0, b.shift || 0, s), fov: lerp(a.fov || 30, b.fov || 30, s), orbit: lerp(a.orbit || 0, b.orbit || 0, s), alert: lerp(a.alert || 0, b.alert || 0, s), labels: cur.labels, fit: cur === CAMS.hero ? heroFit : null, shiftY: lerp(a.shiftY || 0, b.shiftY || 0, s) });
   $('veil').style.opacity = lerp(a.veil || 0, b.veil || 0, s);
   const key = camSecs[i].id;
   if (key !== lastKey) { lastKey = key; navLinks.forEach(l => l.classList.toggle('on', l.getAttribute('href') === '#' + key)) }
